@@ -1,5 +1,5 @@
 {
-  "name": "codex-mac-electron-port",
+  "name": "codex-linux-port",
   "private": true,
   "version": "0.1.0",
   "description": "Experimental Linux port builder for the macOS Codex Electron bundle.",

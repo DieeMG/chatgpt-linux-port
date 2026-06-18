@@ -1,4 +1,4 @@
-# Codex macOS Electron Linux Port
+# Codex Linux Port
 
 Experimental Linux port builder for the macOS Codex Electron desktop app.
 
