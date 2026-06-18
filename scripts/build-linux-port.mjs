@@ -134,7 +134,7 @@ writeExecutable(
   path.join(resources, "codex"),
   `#!/usr/bin/env bash
 set -euo pipefail
-exec /home/dieemg/.local/bin/codex "$@"
+exec "\${CODEX_CLI_PATH:-$HOME/.local/bin/codex}" "$@"
 `,
 );
 

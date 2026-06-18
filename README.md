@@ -13,7 +13,7 @@ This repository does not redistribute the Codex application bundle, DMG, extract
 - `unzip`
 - `file`
 - `desktop-file-validate` and `update-desktop-database` recommended for desktop integration
-- A working Codex CLI at `~/.local/bin/codex`
+- A working Codex CLI at `~/.local/bin/codex`, or set `CODEX_CLI_PATH`
 
 ## Build
 
@@ -29,6 +29,12 @@ After install, launch with:
 
 ```bash
 codex-app
+```
+
+If your Codex CLI lives somewhere else:
+
+```bash
+CODEX_CLI_PATH=/path/to/codex codex-app
 ```
 
 The local install path is:
