@@ -25,6 +25,14 @@ npm run doctor
 npm run install:local
 ```
 
+## Update
+
+```bash
+npm run update
+```
+
+The update command removes the cached upstream DMG, downloads/extracts the current official Codex DMG, rebuilds the Linux port, runs `doctor`, and installs the new build locally. The existing installed app is replaced only after the new build passes validation.
+
 After install, launch with:
 
 ```bash
