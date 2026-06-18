@@ -14,6 +14,7 @@ const binDir = path.join(home, ".local", "bin");
 const applicationsDir = path.join(home, ".local", "share", "applications");
 const launcher = path.join(binDir, "codex-app");
 const desktopFile = path.join(applicationsDir, "codex-linux-port.desktop");
+const linuxDesktopId = "codex-linux-port";
 
 function mustExist(target) {
   if (!fs.existsSync(target)) {
@@ -57,7 +58,8 @@ Icon=${path.join(installRoot, "resources", "icon.png")}
 Terminal=false
 Categories=Development;IDE;
 MimeType=x-scheme-handler/codex;
-StartupWMClass=Codex
+StartupWMClass=${linuxDesktopId}
+StartupNotify=true
 `,
 );
 

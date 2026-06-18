@@ -17,6 +17,7 @@ const dist = path.join(root, "out", "Codex-linux-x64");
 const resources = path.join(dist, "resources");
 const appDest = path.join(resources, "app");
 const nativeDeps = path.join(root, "work", "linux-native-deps");
+const linuxDesktopId = "codex-linux-port";
 
 function rm(target) {
   fs.rmSync(target, { force: true, recursive: true });
@@ -201,7 +202,7 @@ export CODEX_SPARKLE_ENABLED=false
 export CODEX_USE_OWL_APP_SHELL=0
 export ELECTRON_OZONE_PLATFORM_HINT="\${ELECTRON_OZONE_PLATFORM_HINT:-x11}"
 cd "$DIR/resources/app"
-exec "$DIR/codex-linux-port-bin" --ozone-platform="\${CODEX_LINUX_OZONE_PLATFORM:-x11}" --disable-gpu-compositing "$@"
+exec "$DIR/codex-linux-port-bin" --class="${linuxDesktopId}" --ozone-platform="\${CODEX_LINUX_OZONE_PLATFORM:-x11}" --disable-gpu-compositing "$@"
 `,
 );
 
@@ -217,7 +218,8 @@ Icon=${path.join(resources, "icon.png")}
 Terminal=false
 Categories=Development;IDE;
 MimeType=x-scheme-handler/codex;
-StartupWMClass=Codex
+StartupWMClass=${linuxDesktopId}
+StartupNotify=true
 `,
 );
 
