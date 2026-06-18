@@ -1,0 +1,12 @@
+node_modules/
+
+# Downloaded upstream binaries. Do not commit Codex DMGs or Electron zips.
+downloads/
+
+# Extracted proprietary app payload and generated Linux build output.
+work/
+out/
+
+# Local logs and caches.
+*.log
+.DS_Store
