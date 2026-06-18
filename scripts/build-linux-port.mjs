@@ -91,6 +91,87 @@ html[data-codex-window-type="electron"] .app-header-tint {
   }
 }
 
+function patchOnce(source, from, to, label) {
+  if (!source.includes(from)) {
+    throw new Error(`Could not apply Linux open target patch: ${label}`);
+  }
+  return source.replace(from, to);
+}
+
+function patchLinuxOpenTargets() {
+  const mainPath = path.join(appDest, ".vite", "build", "main-DLo8G5hp.js");
+  if (!fs.existsSync(mainPath)) {
+    throw new Error(`Missing main bundle for Linux open target patch: ${mainPath}`);
+  }
+
+  let main = fs.readFileSync(mainPath, "utf8");
+
+  main = patchOnce(
+    main,
+    "function cA({id:e,label:t,icon:n,darwinDetect:r,win32Detect:i,darwinEnv:a,darwinArgs:o,hidden:s}){return{id:e,platforms:{darwin:r?{label:t,icon:n,kind:`editor`,hidden:s,detect:r,env:a,args:o??lA,supportsSsh:!0}:void 0,win32:i?{label:t,icon:n,kind:`editor`,hidden:s,detect:i,args:lA,supportsSsh:!0}:void 0}}}",
+    "function cA({id:e,label:t,icon:n,darwinDetect:r,win32Detect:i,linuxDetect:u,darwinEnv:a,darwinArgs:o,linuxArgs:c,hidden:s}){return{id:e,platforms:{darwin:r?{label:t,icon:n,kind:`editor`,hidden:s,detect:r,env:a,args:o??lA,supportsSsh:!0}:void 0,win32:i?{label:t,icon:n,kind:`editor`,hidden:s,detect:i,args:lA,supportsSsh:!0}:void 0,linux:u?{label:t,icon:n,kind:`editor`,hidden:s,detect:u,args:c??lA,supportsSsh:!1}:void 0}}}",
+    "editor target helper",
+  );
+
+  main = patchOnce(
+    main,
+    "uA=cA({id:`antigravity`,label:`Antigravity`,icon:`apps/antigravity.png`,darwinDetect:()=>Hk([`/Applications/Antigravity.app/Contents/Resources/app/bin/antigravity`]),win32Detect:dA})",
+    "uA=cA({id:`antigravity`,label:`Antigravity`,icon:`apps/antigravity.png`,darwinDetect:()=>Hk([`/Applications/Antigravity.app/Contents/Resources/app/bin/antigravity`]),win32Detect:dA,linuxDetect:()=>Co(`antigravity`)??Co(`google-antigravity`)})",
+    "Antigravity Linux target",
+  );
+
+  main = patchOnce(
+    main,
+    "Pj=cA({id:`vscode`,label:`VS Code`,icon:`apps/vscode.png`,darwinDetect:()=>Hk([`/Applications/Visual Studio Code.app/Contents/Resources/app/bin/code`,`/Applications/Code.app/Contents/Resources/app/bin/code`]),win32Detect:Fj})",
+    "Pj=cA({id:`vscode`,label:`VS Code`,icon:`apps/vscode.png`,darwinDetect:()=>Hk([`/Applications/Visual Studio Code.app/Contents/Resources/app/bin/code`,`/Applications/Code.app/Contents/Resources/app/bin/code`]),win32Detect:Fj,linuxDetect:()=>Co(`code`)})",
+    "VS Code Linux target",
+  );
+
+  main = patchOnce(
+    main,
+    "Ij=cA({id:`vscodeInsiders`,label:`VS Code Insiders`,icon:`apps/vscode-insiders.png`,darwinDetect:()=>Hk([`/Applications/Visual Studio Code - Insiders.app/Contents/Resources/app/bin/code`,`/Applications/Code - Insiders.app/Contents/Resources/app/bin/code`]),win32Detect:Lj})",
+    "Ij=cA({id:`vscodeInsiders`,label:`VS Code Insiders`,icon:`apps/vscode-insiders.png`,darwinDetect:()=>Hk([`/Applications/Visual Studio Code - Insiders.app/Contents/Resources/app/bin/code`,`/Applications/Code - Insiders.app/Contents/Resources/app/bin/code`]),win32Detect:Lj,linuxDetect:()=>Co(`code-insiders`)})",
+    "VS Code Insiders Linux target",
+  );
+
+  main = patchOnce(
+    main,
+    "zj=cA({id:`windsurf`,label:`Windsurf`,icon:`apps/windsurf.png`,darwinDetect:()=>Hk([`/Applications/Windsurf.app/Contents/Resources/app/bin/windsurf`])})",
+    "zj=cA({id:`windsurf`,label:`Windsurf`,icon:`apps/windsurf.png`,darwinDetect:()=>Hk([`/Applications/Windsurf.app/Contents/Resources/app/bin/windsurf`]),linuxDetect:()=>Co(`windsurf`)})",
+    "Windsurf Linux target",
+  );
+
+  main = patchOnce(
+    main,
+    "FA=cA({id:`cursor`,label:`Cursor`,icon:`apps/cursor.png`,darwinDetect:()=>LA()?.electronBin??null,win32Detect:RA,darwinEnv:()=>{let e={...process.env};return e.VSCODE_NODE_OPTIONS=e.NODE_OPTIONS,e.VSCODE_NODE_REPL_EXTERNAL_MODULE=e.NODE_REPL_EXTERNAL_MODULE,delete e.NODE_OPTIONS,delete e.NODE_REPL_EXTERNAL_MODULE,e.ELECTRON_RUN_AS_NODE=`1`,e},darwinArgs:(...e)=>{let t=LA();if(!t)throw Error(`Cursor CLI entrypoint not available`);return[t.cliJs,...IA(...e)]}})",
+    "FA=cA({id:`cursor`,label:`Cursor`,icon:`apps/cursor.png`,darwinDetect:()=>LA()?.electronBin??null,win32Detect:RA,linuxDetect:()=>Co(`cursor`),darwinEnv:()=>{let e={...process.env};return e.VSCODE_NODE_OPTIONS=e.NODE_OPTIONS,e.VSCODE_NODE_REPL_EXTERNAL_MODULE=e.NODE_REPL_EXTERNAL_MODULE,delete e.NODE_OPTIONS,delete e.NODE_REPL_EXTERNAL_MODULE,e.ELECTRON_RUN_AS_NODE=`1`,e},darwinArgs:(...e)=>{let t=LA();if(!t)throw Error(`Cursor CLI entrypoint not available`);return[t.cliJs,...IA(...e)]}})",
+    "Cursor Linux target",
+  );
+
+  main = patchOnce(
+    main,
+    "Sj=sA({id:`sublimeText`,label:`Sublime Text`,icon:`apps/sublime-text.png`,kind:`editor`,darwin:{detect:Cj,args:yj},win32:{detect:wj,args:yj}})",
+    "Sj=sA({id:`sublimeText`,label:`Sublime Text`,icon:`apps/sublime-text.png`,kind:`editor`,darwin:{detect:Cj,args:yj},win32:{detect:wj,args:yj},linux:{detect:()=>Co(`subl`)??Co(`sublime_text`),args:yj}})",
+    "Sublime Text Linux target",
+  );
+
+  main = patchOnce(
+    main,
+    "BA=sA({id:`fileManager`,label:`Finder`,icon:`apps/finder.png`,kind:`fileManager`,darwin:{detect:()=>`open`,args:e=>To(e)},win32:{label:`File Explorer`,icon:`apps/file-explorer.png`,detect:VA,args:e=>To(e),open:async({path:e})=>HA(e)}})",
+    "BA=sA({id:`fileManager`,label:`Finder`,icon:`apps/finder.png`,kind:`fileManager`,darwin:{detect:()=>`open`,args:e=>To(e)},win32:{label:`File Explorer`,icon:`apps/file-explorer.png`,detect:VA,args:e=>To(e),open:async({path:e})=>HA(e)},linux:{label:`Files`,icon:`apps/file-explorer.png`,detect:()=>Co(`xdg-open`)??`system-default`,args:e=>[vA(e)],open:async({path:e})=>Dj(vA(e))}})",
+    "Linux file manager target",
+  );
+
+  main = patchOnce(
+    main,
+    "Xj={id:`zed`,platforms:{darwin:{label:`Zed`,icon:`apps/zed.png`,kind:`editor`,detect:Zj,args:yj,open:eM},win32:{label:`Zed`,icon:`apps/zed.png`,kind:`editor`,detect:Qj,args:yj}}}",
+    "Xj={id:`zed`,platforms:{darwin:{label:`Zed`,icon:`apps/zed.png`,kind:`editor`,detect:Zj,args:yj,open:eM},win32:{label:`Zed`,icon:`apps/zed.png`,kind:`editor`,detect:Qj,args:yj},linux:{label:`Zed`,icon:`apps/zed.png`,kind:`editor`,detect:()=>Co(`zed`),args:yj}}}",
+    "Zed Linux target",
+  );
+
+  fs.writeFileSync(mainPath, main);
+}
+
 mustExist(sourceApp, "extracted app");
 mustExist(sourceResources, "extracted resources");
 
@@ -102,6 +183,7 @@ mustExist(electronDist, "Electron dist. Run npm install first");
 cp(electronDist, dist);
 cp(sourceApp, appDest);
 patchLinuxRendering();
+patchLinuxOpenTargets();
 const electronExecutable = path.join(dist, "electron");
 const portExecutable = path.join(dist, "codex-linux-port-bin");
 if (fs.existsSync(electronExecutable)) {

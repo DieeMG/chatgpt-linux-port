@@ -65,6 +65,10 @@ To test Wayland manually:
 CODEX_LINUX_OZONE_PLATFORM=wayland codex-app
 ```
 
+## Linux Integration Notes
+
+The builder patches Codex's Electron `open-in-targets` registry so the "Open in..." menu can discover Linux editors from `PATH`. It currently enables VS Code (`code`), VS Code Insiders (`code-insiders`), Cursor (`cursor`), Antigravity (`antigravity` or `google-antigravity`), Windsurf (`windsurf`), Zed (`zed`), Sublime Text (`subl` or `sublime_text`), and a Linux file manager fallback.
+
 ## Legal Note
 
 This is an experimental private builder. Do not publish or redistribute downloaded/extracted Codex application assets unless you have the rights to do so.
