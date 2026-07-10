@@ -28,6 +28,33 @@ function run(command, args, options = {}) {
   });
 }
 
+function findAppAsar(rootDir) {
+  const pending = [rootDir];
+  while (pending.length > 0) {
+    const dir = pending.pop();
+    let entries;
+    try {
+      entries = fs.readdirSync(dir, { withFileTypes: true });
+    } catch {
+      continue;
+    }
+
+    for (const entry of entries) {
+      const fullPath = path.join(dir, entry.name);
+      if (entry.isDirectory()) {
+        pending.push(fullPath);
+        continue;
+      }
+
+      if (entry.isFile() && entry.name === "app.asar") {
+        return fullPath;
+      }
+    }
+  }
+
+  return null;
+}
+
 function commandExists(command) {
   try {
     execFileSync("sh", ["-c", `command -v ${command}`], { stdio: "ignore" });
@@ -54,21 +81,22 @@ function download(url, target) {
 }
 
 function extractCodexApp() {
-  const resources = path.join(
-    extracted,
-    "Codex Installer",
-    "Codex.app",
-    "Contents",
-    "Resources",
-  );
-  const asar = path.join(resources, "app.asar");
-
   fs.rmSync(extracted, { force: true, recursive: true });
   fs.mkdirSync(extracted, { recursive: true });
-  run("7z", ["x", codexDmg, `-o${extracted}`]);
+  try {
+    run("7z", ["x", codexDmg, `-o${extracted}`]);
+  } catch (error) {
+    const asar = findAppAsar(extracted);
+    if (!asar) {
+      throw error;
+    }
+    console.warn(`warn: 7z reported non-fatal extraction errors; continuing with ${asar}`);
+  }
 
-  if (!fs.existsSync(asar)) {
-    throw new Error(`Could not find extracted app.asar at ${asar}`);
+  const asar = findAppAsar(extracted);
+
+  if (!asar || !fs.existsSync(asar)) {
+    throw new Error(`Could not find extracted app.asar under ${extracted}`);
   }
 
   fs.rmSync(sourceApp, { force: true, recursive: true });
