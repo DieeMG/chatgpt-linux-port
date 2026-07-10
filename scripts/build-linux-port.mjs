@@ -76,6 +76,102 @@ function findSourceResources() {
   return path.dirname(appAsar);
 }
 
+function decodeXmlEntities(value) {
+  return value
+    .replaceAll("&amp;", "&")
+    .replaceAll("&lt;", "<")
+    .replaceAll("&gt;", ">")
+    .replaceAll("&quot;", '"')
+    .replaceAll("&apos;", "'");
+}
+
+function readPlistString(plistPath, key) {
+  if (!fs.existsSync(plistPath)) {
+    return null;
+  }
+
+  const plist = fs.readFileSync(plistPath, "utf8");
+  const escapedKey = key.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const match = new RegExp(`<key>\\s*${escapedKey}\\s*</key>\\s*<string>([\\s\\S]*?)</string>`).exec(plist);
+  return match?.[1] ? decodeXmlEntities(match[1]).trim() : null;
+}
+
+function readPackageProductName() {
+  try {
+    const packageJson = JSON.parse(fs.readFileSync(path.join(sourceApp, "package.json"), "utf8"));
+    return typeof packageJson.productName === "string" ? packageJson.productName.trim() : null;
+  } catch {
+    return null;
+  }
+}
+
+function readAppMetadata(sourceResources) {
+  const infoPlist = path.resolve(sourceResources, "..", "Info.plist");
+  const displayName =
+    readPlistString(infoPlist, "CFBundleDisplayName") ??
+    readPlistString(infoPlist, "CFBundleName") ??
+    readPackageProductName() ??
+    "Codex";
+  const iconFile = readPlistString(infoPlist, "CFBundleIconFile");
+
+  return { displayName, iconFile };
+}
+
+function extractLargestPngFromIcns(icnsPath, pngPath) {
+  if (!fs.existsSync(icnsPath)) {
+    return false;
+  }
+
+  const icns = fs.readFileSync(icnsPath);
+  if (icns.length < 8 || icns.toString("ascii", 0, 4) !== "icns") {
+    return false;
+  }
+
+  const pngSignature = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
+  let bestPng = null;
+  let offset = 8;
+  while (offset + 8 <= icns.length) {
+    const length = icns.readUInt32BE(offset + 4);
+    if (length < 8 || offset + length > icns.length) {
+      break;
+    }
+
+    const payload = icns.subarray(offset + 8, offset + length);
+    const pngOffset = payload.indexOf(pngSignature);
+    if (pngOffset >= 0) {
+      const png = payload.subarray(pngOffset);
+      if (!bestPng || png.length > bestPng.length) {
+        bestPng = png;
+      }
+    }
+
+    offset += length;
+  }
+
+  if (!bestPng) {
+    return false;
+  }
+
+  fs.writeFileSync(pngPath, bestPng);
+  return true;
+}
+
+function resolveIconPath(sourceResources, iconFile) {
+  if (!iconFile) {
+    return null;
+  }
+
+  const candidates = [iconFile, iconFile.endsWith(".icns") ? iconFile : `${iconFile}.icns`];
+  for (const candidate of candidates) {
+    const iconPath = path.join(sourceResources, candidate);
+    if (fs.existsSync(iconPath)) {
+      return iconPath;
+    }
+  }
+
+  return null;
+}
+
 function findMainBundle() {
   const buildDir = path.join(appDest, ".vite", "build");
   const mainPath = findFirst(buildDir, (_fullPath, entry) => /^main-.*\.js$/.test(entry.name));
@@ -293,6 +389,7 @@ function patchLinuxOpenTargets() {
 
 mustExist(sourceApp, "extracted app");
 const sourceResources = findSourceResources();
+const appMetadata = readAppMetadata(sourceResources);
 
 rm(dist);
 fs.mkdirSync(resources, { recursive: true });
@@ -324,12 +421,21 @@ for (const name of ["better-sqlite3", "node-pty"]) {
   cp(path.join(nativeDeps, "node_modules", name), path.join(appDest, "node_modules", name));
 }
 
-const sourceIcon = fs.existsSync(path.join(sourceResources, "icon.png"))
-  ? path.join(sourceResources, "icon.png")
-  : path.join(sourceResources, "default_app", "icon.png");
-if (fs.existsSync(sourceIcon)) {
+const sourceIconFromPlist = resolveIconPath(sourceResources, appMetadata.iconFile);
+const desktopIcon = path.join(resources, "icon.png");
+if (sourceIconFromPlist?.endsWith(".icns") && extractLargestPngFromIcns(sourceIconFromPlist, desktopIcon)) {
+  console.log(`Extracted desktop icon from ${sourceIconFromPlist}`);
+} else {
+  const sourceIcon = fs.existsSync(path.join(sourceResources, "icon.png"))
+    ? path.join(sourceResources, "icon.png")
+    : path.join(sourceResources, "default_app", "icon.png");
   cp(sourceIcon, path.join(resources, "icon.png"));
 }
+
+fs.writeFileSync(
+  path.join(resources, "app-metadata.json"),
+  JSON.stringify(appMetadata, null, 2),
+);
 
 for (const name of ["codex-notification.wav", "plugins"]) {
   const src = path.join(sourceResources, name);
@@ -419,8 +525,8 @@ fs.writeFileSync(
   desktop,
   `[Desktop Entry]
 Type=Application
-Name=Codex Linux Port
-Comment=Experimental Linux port of the Codex Electron desktop app
+Name=${appMetadata.displayName}
+Comment=Experimental Linux port of the ${appMetadata.displayName} Electron desktop app
 Exec=${bin} %u
 Icon=${path.join(resources, "icon.png")}
 Terminal=false

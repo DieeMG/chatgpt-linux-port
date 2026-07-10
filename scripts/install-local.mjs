@@ -30,7 +30,31 @@ function run(command, args) {
   }
 }
 
+function sanitizeDesktopEntryValue(value) {
+  return value.replace(/[\r\n]/g, " ").trim();
+}
+
+function readAppMetadata(appRoot) {
+  const metadataPath = path.join(appRoot, "resources", "app-metadata.json");
+  if (!fs.existsSync(metadataPath)) {
+    return { displayName: "Codex" };
+  }
+
+  try {
+    const metadata = JSON.parse(fs.readFileSync(metadataPath, "utf8"));
+    return {
+      displayName:
+        typeof metadata.displayName === "string" && metadata.displayName.trim()
+          ? sanitizeDesktopEntryValue(metadata.displayName)
+          : "Codex",
+    };
+  } catch {
+    return { displayName: "Codex" };
+  }
+}
+
 mustExist(path.join(builtApp, "codex-linux-port"));
+const appMetadata = readAppMetadata(builtApp);
 
 fs.rmSync(installRoot, { force: true, recursive: true });
 fs.mkdirSync(path.dirname(installRoot), { recursive: true });
@@ -51,8 +75,8 @@ fs.writeFileSync(
   desktopFile,
   `[Desktop Entry]
 Type=Application
-Name=Codex
-Comment=Experimental Linux port of the Codex Electron desktop app
+Name=${appMetadata.displayName}
+Comment=Experimental Linux port of the ${appMetadata.displayName} Electron desktop app
 Exec=${launcher} %u
 Icon=${path.join(installRoot, "resources", "icon.png")}
 Terminal=false
