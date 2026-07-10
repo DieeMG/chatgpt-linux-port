@@ -324,7 +324,14 @@ for (const name of ["better-sqlite3", "node-pty"]) {
   cp(path.join(nativeDeps, "node_modules", name), path.join(appDest, "node_modules", name));
 }
 
-for (const name of ["icon.png", "codex-notification.wav", "plugins"]) {
+const sourceIcon = fs.existsSync(path.join(sourceResources, "icon.png"))
+  ? path.join(sourceResources, "icon.png")
+  : path.join(sourceResources, "default_app", "icon.png");
+if (fs.existsSync(sourceIcon)) {
+  cp(sourceIcon, path.join(resources, "icon.png"));
+}
+
+for (const name of ["codex-notification.wav", "plugins"]) {
   const src = path.join(sourceResources, name);
   if (fs.existsSync(src)) {
     cp(src, path.join(resources, name));
