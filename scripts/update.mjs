@@ -10,9 +10,15 @@ const sourcePackageJson = path.join(root, "work", "app", "package.json");
 const codexDmgUrl =
   process.env.CODEX_DMG_URL ??
   "https://persistent.oaistatic.com/codex-app-prod/Codex.dmg";
-const installedPackageJson = home
+const currentInstalledPackageJson = home
+  ? path.join(home, ".local", "share", "chatgpt-linux-port", "resources", "app", "package.json")
+  : null;
+const legacyInstalledPackageJson = home
   ? path.join(home, ".local", "share", "codex-linux-port", "resources", "app", "package.json")
   : null;
+const installedPackageJsonCandidates = home
+  ? [currentInstalledPackageJson, legacyInstalledPackageJson]
+  : [];
 
 function readVersion(packageJsonPath) {
   if (!packageJsonPath || !fs.existsSync(packageJsonPath)) {
@@ -124,8 +130,14 @@ function writeCachedDmgMetadata(remoteMetadata) {
   fs.writeFileSync(cachedDmgMetadata, `${JSON.stringify(metadata, null, 2)}\n`);
 }
 
+function findInstalledPackageJson() {
+  return installedPackageJsonCandidates.find((candidate) => fs.existsSync(candidate)) ?? installedPackageJsonCandidates[0] ?? null;
+}
+
+const installedPackageJson = findInstalledPackageJson();
 const previousVersion = readVersion(installedPackageJson);
 const sourceVersion = readVersion(sourcePackageJson);
+const installNeedsMigration = installedPackageJson !== currentInstalledPackageJson || (legacyInstalledPackageJson && fs.existsSync(legacyInstalledPackageJson));
 console.log(`Current installed ChatGPT app version: ${previousVersion}`);
 console.log(`Current extracted ChatGPT app version: ${sourceVersion}`);
 
@@ -135,10 +147,14 @@ console.log(
   `Upstream DMG: size=${remoteMetadata.contentLength ?? "unknown"} etag=${remoteMetadata.etag ?? "unknown"} last-modified=${remoteMetadata.lastModified ?? "unknown"}`,
 );
 
-if (previousVersion !== "not installed" && previousVersion !== "unknown" && previousVersion === sourceVersion && cacheIsCurrent) {
+if (!installNeedsMigration && previousVersion !== "not installed" && previousVersion !== "unknown" && previousVersion === sourceVersion && cacheIsCurrent) {
   writeCachedDmgMetadata(remoteMetadata);
   console.log(`\nAlready up to date: ${previousVersion}`);
   process.exit(0);
+}
+
+if (installNeedsMigration) {
+  console.log("Install path migration required: legacy codex-linux-port artifacts will be replaced with chatgpt-linux-port.");
 }
 
 if (!cacheIsCurrent && fs.existsSync(cachedDmg)) {
@@ -152,5 +168,5 @@ runNpmScript("build");
 runNpmScript("doctor");
 runNpmScript("install:local");
 
-const nextVersion = readVersion(installedPackageJson);
+const nextVersion = readVersion(findInstalledPackageJson());
 console.log(`\nUpdate complete: ${previousVersion} -> ${nextVersion}`);

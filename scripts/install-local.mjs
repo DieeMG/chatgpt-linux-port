@@ -8,13 +8,16 @@ if (!home) {
 }
 
 const root = path.resolve(import.meta.dirname, "..");
-const builtApp = path.join(root, "out", "Codex-linux-x64");
-const installRoot = path.join(home, ".local", "share", "codex-linux-port");
+const builtApp = path.join(root, "out", "ChatGPT-linux-x64");
+const installRoot = path.join(home, ".local", "share", "chatgpt-linux-port");
+const legacyInstallRoot = path.join(home, ".local", "share", "codex-linux-port");
 const binDir = path.join(home, ".local", "bin");
 const applicationsDir = path.join(home, ".local", "share", "applications");
-const launcher = path.join(binDir, "codex-app");
-const desktopFile = path.join(applicationsDir, "codex-linux-port.desktop");
-const linuxDesktopClass = "codex";
+const launcher = path.join(binDir, "chatgpt-app");
+const legacyLauncher = path.join(binDir, "codex-app");
+const desktopFile = path.join(applicationsDir, "chatgpt-linux-port.desktop");
+const legacyDesktopFile = path.join(applicationsDir, "codex-linux-port.desktop");
+const linuxDesktopClass = "chatgpt";
 
 function mustExist(target) {
   if (!fs.existsSync(target)) {
@@ -37,7 +40,7 @@ function sanitizeDesktopEntryValue(value) {
 function readAppMetadata(appRoot) {
   const metadataPath = path.join(appRoot, "resources", "app-metadata.json");
   if (!fs.existsSync(metadataPath)) {
-    return { displayName: "Codex" };
+    return { displayName: "ChatGPT" };
   }
 
   try {
@@ -46,17 +49,18 @@ function readAppMetadata(appRoot) {
       displayName:
         typeof metadata.displayName === "string" && metadata.displayName.trim()
           ? sanitizeDesktopEntryValue(metadata.displayName)
-          : "Codex",
+          : "ChatGPT",
     };
   } catch {
-    return { displayName: "Codex" };
+    return { displayName: "ChatGPT" };
   }
 }
 
-mustExist(path.join(builtApp, "codex-linux-port"));
+mustExist(path.join(builtApp, "chatgpt-linux-port"));
 const appMetadata = readAppMetadata(builtApp);
 
 fs.rmSync(installRoot, { force: true, recursive: true });
+fs.rmSync(legacyInstallRoot, { force: true, recursive: true });
 fs.mkdirSync(path.dirname(installRoot), { recursive: true });
 fs.cpSync(builtApp, installRoot, { force: true, recursive: true, dereference: false });
 
@@ -65,10 +69,11 @@ fs.writeFileSync(
   launcher,
   `#!/usr/bin/env bash
 set -euo pipefail
-exec "${path.join(installRoot, "codex-linux-port")}" "$@"
+exec "${path.join(installRoot, "chatgpt-linux-port")}" "$@"
 `,
   { mode: 0o755 },
 );
+fs.rmSync(legacyLauncher, { force: true });
 
 fs.mkdirSync(applicationsDir, { recursive: true });
 fs.writeFileSync(
@@ -86,10 +91,11 @@ StartupWMClass=${linuxDesktopClass}
 StartupNotify=true
 `,
 );
+fs.rmSync(legacyDesktopFile, { force: true });
 
 run("desktop-file-validate", [desktopFile]);
 run("update-desktop-database", [applicationsDir]);
-run("xdg-mime", ["default", "codex-linux-port.desktop", "x-scheme-handler/codex"]);
+run("xdg-mime", ["default", "chatgpt-linux-port.desktop", "x-scheme-handler/codex"]);
 
 console.log(`Installed app: ${installRoot}`);
 console.log(`Launcher: ${launcher}`);

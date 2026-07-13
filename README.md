@@ -36,24 +36,26 @@ The update command checks the installed app version against the current official
 After install, launch with:
 
 ```bash
-codex-app
+chatgpt-app
 ```
 
 If your Codex CLI lives somewhere else:
 
 ```bash
-CODEX_CLI_PATH=/path/to/codex codex-app
+CODEX_CLI_PATH=/path/to/codex chatgpt-app
 ```
 
 The local install path is:
 
 ```text
-~/.local/share/codex-linux-port
+~/.local/share/chatgpt-linux-port
 ```
+
+`install:local` removes legacy `codex-linux-port` install artifacts, including `~/.local/share/codex-linux-port`, `~/.local/bin/codex-app`, and `codex-linux-port.desktop`.
 
 ## Rendering Notes
 
-The macOS app uses transparent Electron window surfaces. On Linux this can produce transparent sidebars and hover trails, especially under Wayland/compositor combinations. The builder injects `webview/assets/codex-linux-port-opaque.css` and launches Electron with X11 ozone plus disabled GPU compositing:
+The macOS app uses transparent Electron window surfaces. On Linux this can produce transparent sidebars and hover trails, especially under Wayland/compositor combinations. The builder injects `webview/assets/chatgpt-linux-port-opaque.css` and launches Electron with X11 ozone plus disabled GPU compositing:
 
 ```text
 --ozone-platform=x11 --disable-gpu-compositing
@@ -62,7 +64,7 @@ The macOS app uses transparent Electron window surfaces. On Linux this can produ
 To test Wayland manually:
 
 ```bash
-CODEX_LINUX_OZONE_PLATFORM=wayland codex-app
+CODEX_LINUX_OZONE_PLATFORM=wayland chatgpt-app
 ```
 
 ## Linux Integration Notes

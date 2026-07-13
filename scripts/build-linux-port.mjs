@@ -4,11 +4,11 @@ import { execFileSync } from "node:child_process";
 
 const root = path.resolve(import.meta.dirname, "..");
 const sourceApp = path.join(root, "work", "app");
-const dist = path.join(root, "out", "Codex-linux-x64");
+const dist = path.join(root, "out", "ChatGPT-linux-x64");
 const resources = path.join(dist, "resources");
 const appDest = path.join(resources, "app");
 const nativeDeps = path.join(root, "work", "linux-native-deps");
-const linuxDesktopClass = "codex";
+const linuxDesktopClass = "chatgpt";
 
 function rm(target) {
   fs.rmSync(target, { force: true, recursive: true });
@@ -111,7 +111,7 @@ function readAppMetadata(sourceResources) {
     readPlistString(infoPlist, "CFBundleDisplayName") ??
     readPlistString(infoPlist, "CFBundleName") ??
     readPackageProductName() ??
-    "Codex";
+    "ChatGPT";
   const iconFile = readPlistString(infoPlist, "CFBundleIconFile");
 
   return { displayName, iconFile };
@@ -183,9 +183,9 @@ function findMainBundle() {
 }
 
 function patchLinuxRendering() {
-  const cssPath = path.join(appDest, "webview", "assets", "codex-linux-port-opaque.css");
+  const cssPath = path.join(appDest, "webview", "assets", "chatgpt-linux-port-opaque.css");
   const htmlPath = path.join(appDest, "webview", "index.html");
-  const cssLink = '<link rel="stylesheet" href="./assets/codex-linux-port-opaque.css">';
+  const cssLink = '<link rel="stylesheet" href="./assets/chatgpt-linux-port-opaque.css">';
 
   fs.writeFileSync(
     cssPath,
@@ -437,7 +437,7 @@ cp(sourceApp, appDest);
 patchLinuxRendering();
 patchLinuxOpenTargets();
 const electronExecutable = path.join(dist, "electron");
-const portExecutable = path.join(dist, "codex-linux-port-bin");
+const portExecutable = path.join(dist, "chatgpt-linux-port-bin");
 if (fs.existsSync(electronExecutable)) {
   fs.renameSync(electronExecutable, portExecutable);
 }
@@ -541,7 +541,7 @@ for (const rel of [
   }
 }
 
-const bin = path.join(dist, "codex-linux-port");
+const bin = path.join(dist, "chatgpt-linux-port");
 writeExecutable(
   bin,
   `#!/usr/bin/env bash
@@ -552,11 +552,11 @@ export CODEX_SPARKLE_ENABLED=false
 export CODEX_USE_OWL_APP_SHELL=0
 export ELECTRON_OZONE_PLATFORM_HINT="\${ELECTRON_OZONE_PLATFORM_HINT:-x11}"
 cd "$DIR/resources/app"
-exec "$DIR/codex-linux-port-bin" --class="${linuxDesktopClass}" --ozone-platform="\${CODEX_LINUX_OZONE_PLATFORM:-x11}" --disable-gpu-compositing "$@"
+exec "$DIR/chatgpt-linux-port-bin" --class="${linuxDesktopClass}" --ozone-platform="\${CODEX_LINUX_OZONE_PLATFORM:-x11}" --disable-gpu-compositing "$@"
 `,
 );
 
-const desktop = path.join(root, "out", "codex-linux-port.desktop");
+const desktop = path.join(root, "out", "chatgpt-linux-port.desktop");
 fs.writeFileSync(
   desktop,
   `[Desktop Entry]

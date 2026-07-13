@@ -3,14 +3,14 @@ import path from "node:path";
 import { execFileSync } from "node:child_process";
 
 const root = path.resolve(import.meta.dirname, "..");
-const dist = path.join(root, "out", "Codex-linux-x64");
+const dist = path.join(root, "out", "ChatGPT-linux-x64");
 const checks = [
   path.join(root, "downloads", "Codex.dmg"),
   path.join(root, "work", "app", "package.json"),
-  path.join(dist, "codex-linux-port-bin"),
+  path.join(dist, "chatgpt-linux-port-bin"),
   path.join(dist, "resources", "app", "package.json"),
   path.join(dist, "resources", "codex"),
-  path.join(dist, "codex-linux-port"),
+  path.join(dist, "chatgpt-linux-port"),
 ];
 
 let ok = true;
