@@ -227,6 +227,30 @@ html[data-codex-window-type="electron"] .app-header-tint {
   }
 }
 
+function patchAppIdentity() {
+  const packageJsonPath = path.join(appDest, "package.json");
+  const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, "utf8"));
+  packageJson.productName = "ChatGPT";
+  packageJson.description = "ChatGPT";
+  fs.writeFileSync(packageJsonPath, `${JSON.stringify(packageJson, null, 2)}\n`);
+
+  const bootstrapPath = findFirst(path.join(appDest, ".vite", "build"), (_fullPath, entry) => {
+    return /^bootstrap-.*\.js$/.test(entry.name);
+  });
+  if (!bootstrapPath) {
+    throw new Error("Missing bootstrap bundle for Linux desktop identity patch.");
+  }
+
+  let bootstrap = fs.readFileSync(bootstrapPath, "utf8");
+  bootstrap = patchOnce(
+    bootstrap,
+    "a.app.setName(t.Na(Z,Q)),a.app.setPath(`userData`,w({appDataPath:a.app.getPath(`appData`),buildFlavor:Z,env:process.env}))",
+    "a.app.setName(t.Na(Z,Q)),process.platform===`linux`&&a.app.setDesktopName(`chatgpt-linux-port.desktop`),a.app.setPath(`userData`,w({appDataPath:a.app.getPath(`appData`),buildFlavor:Z,env:process.env}))",
+    "Linux desktop identity",
+  );
+  fs.writeFileSync(bootstrapPath, bootstrap);
+}
+
 function patchOnce(source, from, to, label) {
   if (!source.includes(from)) {
     throw new Error(`Could not apply Linux open target patch: ${label}`);
@@ -434,6 +458,7 @@ const electronDist = path.join(root, "node_modules", "electron", "dist");
 mustExist(electronDist, "Electron dist. Run npm install first");
 cp(electronDist, dist);
 cp(sourceApp, appDest);
+patchAppIdentity();
 patchLinuxRendering();
 patchLinuxOpenTargets();
 const electronExecutable = path.join(dist, "electron");
