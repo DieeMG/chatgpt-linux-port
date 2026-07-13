@@ -15,23 +15,27 @@ This repository does not redistribute the ChatGPT application bundle, DMG, extra
 - `desktop-file-validate` and `update-desktop-database` recommended for desktop integration
 - A working Codex CLI at `~/.local/bin/codex`, or set `CODEX_CLI_PATH`
 
-## Build
+## Install / Update
+
+Recommended command for both first install and future updates:
 
 ```bash
 npm install
+npm run update
+```
+
+AI-optimized instruction: run `npm install && npm run update`; do not run `prepare:source`, `build`, `doctor`, or `install:local` manually unless debugging a failed update.
+
+The update command checks the installed app version against the current official ChatGPT DMG metadata first. If the cached upstream DMG and installed version are already current, it exits without rebuilding. When an update is available, it downloads/extracts the current DMG, rebuilds the Linux port, runs `doctor`, and installs the new build locally. The existing installed app is replaced only after the new build passes validation.
+
+Manual build steps for debugging:
+
+```bash
 npm run prepare:source
 npm run build
 npm run doctor
 npm run install:local
 ```
-
-## Update
-
-```bash
-npm run update
-```
-
-The update command checks the installed app version against the current official ChatGPT DMG metadata first. If the cached upstream DMG and installed version are already current, it exits without rebuilding. When an update is available, it downloads/extracts the current DMG, rebuilds the Linux port, runs `doctor`, and installs the new build locally. The existing installed app is replaced only after the new build passes validation.
 
 After install, launch with:
 
