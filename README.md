@@ -1,8 +1,8 @@
-# Codex Linux Port
+# ChatGPT Linux Port (ex Codex)
 
-Experimental Linux port builder for the macOS Codex Electron desktop app.
+Experimental Linux port builder for the macOS ChatGPT Electron desktop app, previously distributed in this workflow as Codex.
 
-This repository does not redistribute the Codex application bundle, DMG, extracted `app.asar`, or generated Linux builds. The scripts download the official macOS installer locally, extract the Electron app payload, replace macOS-only native pieces, rebuild Linux native Node modules, and install the result under `~/.local`.
+This repository does not redistribute the ChatGPT application bundle, DMG, extracted `app.asar`, or generated Linux builds. The scripts download the official macOS installer locally, extract the Electron app payload, replace macOS-only native pieces, rebuild Linux native Node modules, and install the result under `~/.local`.
 
 ## Requirements
 
@@ -31,7 +31,7 @@ npm run install:local
 npm run update
 ```
 
-The update command removes the cached upstream DMG, downloads/extracts the current official Codex DMG, rebuilds the Linux port, runs `doctor`, and installs the new build locally. The existing installed app is replaced only after the new build passes validation.
+The update command checks the installed app version against the current official ChatGPT DMG metadata first. If the cached upstream DMG and installed version are already current, it exits without rebuilding. When an update is available, it downloads/extracts the current DMG, rebuilds the Linux port, runs `doctor`, and installs the new build locally. The existing installed app is replaced only after the new build passes validation.
 
 After install, launch with:
 
@@ -67,8 +67,8 @@ CODEX_LINUX_OZONE_PLATFORM=wayland codex-app
 
 ## Linux Integration Notes
 
-The builder patches Codex's Electron `open-in-targets` registry so the "Open in..." menu can discover Linux editors from `PATH`. It currently enables VS Code (`code`), VS Code Insiders (`code-insiders`), Cursor (`cursor`), Antigravity (`antigravity` or `google-antigravity`), Windsurf (`windsurf`), Zed (`zed`), Sublime Text (`subl` or `sublime_text`), and a Linux file manager fallback.
+The builder patches the app's Electron `open-in-targets` registry so the "Open in..." menu can discover Linux editors from `PATH`. It currently enables VS Code (`code`), VS Code Insiders (`code-insiders`), Cursor (`cursor`), Antigravity (`antigravity` or `google-antigravity`), Windsurf (`windsurf`), Zed (`zed`), Sublime Text (`subl` or `sublime_text`), and a Linux file manager fallback.
 
 ## Legal Note
 
-This is an experimental private builder. Do not publish or redistribute downloaded/extracted Codex application assets unless you have the rights to do so.
+This is an experimental private builder. Do not publish or redistribute downloaded/extracted ChatGPT application assets unless you have the rights to do so.

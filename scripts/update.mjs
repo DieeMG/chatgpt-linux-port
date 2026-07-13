@@ -126,8 +126,8 @@ function writeCachedDmgMetadata(remoteMetadata) {
 
 const previousVersion = readVersion(installedPackageJson);
 const sourceVersion = readVersion(sourcePackageJson);
-console.log(`Current installed Codex app version: ${previousVersion}`);
-console.log(`Current extracted Codex app version: ${sourceVersion}`);
+console.log(`Current installed ChatGPT app version: ${previousVersion}`);
+console.log(`Current extracted ChatGPT app version: ${sourceVersion}`);
 
 const remoteMetadata = readRemoteDmgMetadata();
 const cacheIsCurrent = cachedDmgMatchesRemote(remoteMetadata);
