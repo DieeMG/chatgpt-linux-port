@@ -242,10 +242,18 @@ function patchAppIdentity() {
   }
 
   let bootstrap = fs.readFileSync(bootstrapPath, "utf8");
-  bootstrap = patchOnce(
+  bootstrap = patchFirst(
     bootstrap,
-    "a.app.setName(t.Na(Z,Q)),a.app.setPath(`userData`,w({appDataPath:a.app.getPath(`appData`),buildFlavor:Z,env:process.env}))",
-    "a.app.setName(t.Na(Z,Q)),process.platform===`linux`&&a.app.setDesktopName(`chatgpt-linux-port.desktop`),a.app.setPath(`userData`,w({appDataPath:a.app.getPath(`appData`),buildFlavor:Z,env:process.env}))",
+    [
+      [
+        "a.app.setName(t.Na(Z,Q)),a.app.setPath(`userData`,ee({appDataPath:a.app.getPath(`appData`),buildFlavor:Z,env:process.env}))",
+        "a.app.setName(t.Na(Z,Q)),process.platform===`linux`&&a.app.setDesktopName(`chatgpt-linux-port.desktop`),a.app.setPath(`userData`,ee({appDataPath:a.app.getPath(`appData`),buildFlavor:Z,env:process.env}))",
+      ],
+      [
+        "a.app.setName(t.Na(Z,Q)),a.app.setPath(`userData`,w({appDataPath:a.app.getPath(`appData`),buildFlavor:Z,env:process.env}))",
+        "a.app.setName(t.Na(Z,Q)),process.platform===`linux`&&a.app.setDesktopName(`chatgpt-linux-port.desktop`),a.app.setPath(`userData`,w({appDataPath:a.app.getPath(`appData`),buildFlavor:Z,env:process.env}))",
+      ],
+    ],
     "Linux desktop identity",
   );
   fs.writeFileSync(bootstrapPath, bootstrap);
