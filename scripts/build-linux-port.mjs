@@ -510,7 +510,19 @@ writeExecutable(
   path.join(resources, "codex"),
   `#!/usr/bin/env bash
 set -euo pipefail
-exec "\${CODEX_CLI_PATH:-$HOME/.local/bin/codex}" "$@"
+
+if [ -n "\${CODEX_CLI_PATH:-}" ]; then
+  exec "\$CODEX_CLI_PATH" "\$@"
+elif command -v codex >/dev/null 2>&1; then
+  exec codex "\$@"
+elif [ -x "\$HOME/.npm-global/bin/codex" ]; then
+  exec "\$HOME/.npm-global/bin/codex" "\$@"
+elif [ -x "\$HOME/.local/bin/codex" ]; then
+  exec "\$HOME/.local/bin/codex" "\$@"
+else
+  echo "Error: codex CLI not found. Please install it using 'npm i -g @openai/codex' or 'curl -fsSL https://chatgpt.com/codex/install.sh | sh'" >&2
+  exit 1
+fi
 `,
 );
 
