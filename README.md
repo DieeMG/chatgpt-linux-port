@@ -2,6 +2,8 @@
 
 Experimental Linux port builder for the macOS ChatGPT Electron desktop app, previously distributed in this workflow as Codex.
 
+Last verified upstream application version: `26.715.31925` (Linux build and startup smoke test).
+
 This repository does not redistribute the ChatGPT application bundle, DMG, extracted `app.asar`, or generated Linux builds. The scripts download the official macOS installer locally, extract the Electron app payload, replace macOS-only native pieces, rebuild Linux native Node modules, and install the result under `~/.local`.
 
 ## Requirements
