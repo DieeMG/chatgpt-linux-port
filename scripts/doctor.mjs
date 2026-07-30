@@ -29,6 +29,28 @@ if (fs.existsSync(dist)) {
   } catch {
     ok = false;
   }
+
+  const buildDir = path.join(dist, "resources", "app", ".vite", "build");
+  const openTargetBundles = fs.existsSync(buildDir)
+    ? fs.readdirSync(buildDir)
+        .filter((name) => name === "worker.js" || /^main-.*\.js$/.test(name))
+        .map((name) => path.join(buildDir, name))
+    : [];
+
+  for (const bundle of openTargetBundles) {
+    const source = fs.readFileSync(bundle, "utf8");
+    const hasVsCode = /id:`vscode`[^;]+linuxDetect:[^;]+`code`/.test(source);
+    const hasCursor = /id:`cursor`[^;]+linuxDetect:[^;]+`cursor`/.test(source);
+    const hasFileManager = /id:`fileManager`[^;]+linux:\{label:`Files`/.test(source);
+    const bundleOk = hasVsCode && hasCursor && hasFileManager;
+    console.log(`${bundleOk ? "ok" : "missing Linux open targets"} ${bundle}`);
+    ok &&= bundleOk;
+  }
+
+  if (openTargetBundles.length < 2) {
+    console.log(`missing Linux open target bundles under ${buildDir}`);
+    ok = false;
+  }
 }
 
 process.exit(ok ? 0 : 1);
