@@ -41,7 +41,7 @@ if (fs.existsSync(dist)) {
     const source = fs.readFileSync(bundle, "utf8");
     const hasVsCode = /id:`vscode`[^;]+linuxDetect:[^;]+`code`/.test(source);
     const hasCursor = /id:`cursor`[^;]+linuxDetect:[^;]+`cursor`/.test(source);
-    const hasFileManager = /id:`fileManager`[^;]+linux:\{label:`Files`/.test(source);
+    const hasFileManager = /id:`fileManager`[^;]+linux:\{label:`(?:Files|File Manager)`/.test(source);
     const bundleOk = hasVsCode && hasCursor && hasFileManager;
     console.log(`${bundleOk ? "ok" : "missing Linux open targets"} ${bundle}`);
     ok &&= bundleOk;

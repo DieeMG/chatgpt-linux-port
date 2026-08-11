@@ -3,6 +3,7 @@ import path from "node:path";
 import { execFileSync } from "node:child_process";
 
 const root = path.resolve(import.meta.dirname, "..");
+const electronVersion = JSON.parse(fs.readFileSync(path.join(root, "package.json"), "utf8")).devDependencies.electron;
 const sourceApp = path.join(root, "work", "app");
 const dist = path.join(root, "out", "ChatGPT-linux-x64");
 const resources = path.join(dist, "resources");
@@ -242,28 +243,46 @@ function patchAppIdentity() {
   }
 
   let bootstrap = fs.readFileSync(bootstrapPath, "utf8");
-  bootstrap = patchFirst(
-    bootstrap,
-    [
+  const match = bootstrap.match(/a\.app\.setName\([^)]+\),a\.app\.setPath\(`userData`,[^{]+\({appDataPath:a\.app\.getPath\(`appData`\),buildFlavor:Z,env:process\.env}\)\)/);
+  if (match) {
+    const original = match[0];
+    const replacement = original.replace(
+      ",a.app.setPath(",
+      ",process.platform===`linux`&&a.app.setDesktopName(`chatgpt-linux-port.desktop`),a.app.setPath("
+    );
+    bootstrap = bootstrap.replace(original, replacement);
+  } else {
+    bootstrap = patchFirst(
+      bootstrap,
       [
-        "a.app.setName(t.Na(Z,Q)),a.app.setPath(`userData`,ee({appDataPath:a.app.getPath(`appData`),buildFlavor:Z,env:process.env}))",
-        "a.app.setName(t.Na(Z,Q)),process.platform===`linux`&&a.app.setDesktopName(`chatgpt-linux-port.desktop`),a.app.setPath(`userData`,ee({appDataPath:a.app.getPath(`appData`),buildFlavor:Z,env:process.env}))",
+        [
+          "a.app.setName(t.Ta(Z,Q)),a.app.setPath(`userData`,ee({appDataPath:a.app.getPath(`appData`),buildFlavor:Z,env:process.env}))",
+          "a.app.setName(t.Ta(Z,Q)),process.platform===`linux`&&a.app.setDesktopName(`chatgpt-linux-port.desktop`),a.app.setPath(`userData`,ee({appDataPath:a.app.getPath(`appData`),buildFlavor:Z,env:process.env}))",
+        ],
+        [
+          "a.app.setName(t.Na(Z,Q)),a.app.setPath(`userData`,ee({appDataPath:a.app.getPath(`appData`),buildFlavor:Z,env:process.env}))",
+          "a.app.setName(t.Na(Z,Q)),process.platform===`linux`&&a.app.setDesktopName(`chatgpt-linux-port.desktop`),a.app.setPath(`userData`,ee({appDataPath:a.app.getPath(`appData`),buildFlavor:Z,env:process.env}))",
+        ],
+        [
+          "a.app.setName(t.Na(Z,Q)),a.app.setPath(`userData`,w({appDataPath:a.app.getPath(`appData`),buildFlavor:Z,env:process.env}))",
+          "a.app.setName(t.Na(Z,Q)),process.platform===`linux`&&a.app.setDesktopName(`chatgpt-linux-port.desktop`),a.app.setPath(`userData`,w({appDataPath:a.app.getPath(`appData`),buildFlavor:Z,env:process.env}))",
+        ],
+        [
+          "a.app.setName(t.qa(Z,Q)),a.app.setPath(`userData`,ee({appDataPath:a.app.getPath(`appData`),buildFlavor:Z,env:process.env}))",
+          "a.app.setName(t.qa(Z,Q)),process.platform===`linux`&&a.app.setDesktopName(`chatgpt-linux-port.desktop`),a.app.setPath(`userData`,ee({appDataPath:a.app.getPath(`appData`),buildFlavor:Z,env:process.env}))",
+        ],
+        [
+          "a.app.setName(t.ro(Z,Q)),a.app.setPath(`userData`,ee({appDataPath:a.app.getPath(`appData`),buildFlavor:Z,env:process.env}))",
+          "a.app.setName(t.ro(Z,Q)),process.platform===`linux`&&a.app.setDesktopName(`chatgpt-linux-port.desktop`),a.app.setPath(`userData`,ee({appDataPath:a.app.getPath(`appData`),buildFlavor:Z,env:process.env}))",
+        ],
+        [
+          "a.app.setName(t.ka(Z,Q)),a.app.setPath(`userData`,ee({appDataPath:a.app.getPath(`appData`),buildFlavor:Z,env:process.env}))",
+          "a.app.setName(t.ka(Z,Q)),process.platform===`linux`&&a.app.setDesktopName(`chatgpt-linux-port.desktop`),a.app.setPath(`userData`,ee({appDataPath:a.app.getPath(`appData`),buildFlavor:Z,env:process.env}))",
+        ],
       ],
-      [
-        "a.app.setName(t.Na(Z,Q)),a.app.setPath(`userData`,w({appDataPath:a.app.getPath(`appData`),buildFlavor:Z,env:process.env}))",
-        "a.app.setName(t.Na(Z,Q)),process.platform===`linux`&&a.app.setDesktopName(`chatgpt-linux-port.desktop`),a.app.setPath(`userData`,w({appDataPath:a.app.getPath(`appData`),buildFlavor:Z,env:process.env}))",
-      ],
-      [
-        "a.app.setName(t.qa(Z,Q)),a.app.setPath(`userData`,ee({appDataPath:a.app.getPath(`appData`),buildFlavor:Z,env:process.env}))",
-        "a.app.setName(t.qa(Z,Q)),process.platform===`linux`&&a.app.setDesktopName(`chatgpt-linux-port.desktop`),a.app.setPath(`userData`,ee({appDataPath:a.app.getPath(`appData`),buildFlavor:Z,env:process.env}))",
-      ],
-      [
-        "a.app.setName(t.ro(Z,Q)),a.app.setPath(`userData`,ee({appDataPath:a.app.getPath(`appData`),buildFlavor:Z,env:process.env}))",
-        "a.app.setName(t.ro(Z,Q)),process.platform===`linux`&&a.app.setDesktopName(`chatgpt-linux-port.desktop`),a.app.setPath(`userData`,ee({appDataPath:a.app.getPath(`appData`),buildFlavor:Z,env:process.env}))",
-      ],
-    ],
-    "Linux desktop identity",
-  );
+      "Linux desktop identity",
+    );
+  }
   fs.writeFileSync(bootstrapPath, bootstrap);
 }
 
@@ -281,6 +300,13 @@ function patchLinuxOpenTargets() {
   const mainPath = findMainBundle();
 
   let main = fs.readFileSync(mainPath, "utf8");
+
+  // Recent upstream builds implement Linux editor and desktop launch targets
+  // directly. Their minified signatures differ from the older macOS-only
+  // implementation, so no compatibility patch is needed in that case.
+  if (main.includes("linuxDetect") && main.includes("Linux desktop application launcher is unavailable")) {
+    return;
+  }
 
   main = patchFirst(
     main,
@@ -570,6 +596,11 @@ function patchLinuxOpenTargetsWorker() {
 
   let worker = fs.readFileSync(workerPath, "utf8");
 
+  // Keep the worker in sync with upstream's native Linux target support.
+  if (worker.includes("linuxDetect") && worker.includes("Linux desktop application launcher is unavailable")) {
+    return;
+  }
+
   worker = patchFirst(
     worker,
     [
@@ -773,6 +804,12 @@ writeExecutable(
   `#!/usr/bin/env bash
 set -euo pipefail
 
+# ChatGPT's embedded app-server must not inherit the active Codex desktop
+# configuration: its feature and plugin layers are not portable across app
+# releases. Keep the port's state isolated while allowing an explicit override.
+export CODEX_HOME="\${CHATGPT_LINUX_CODEX_HOME:-\$HOME/.chatgpt-linux-port}"
+mkdir -p "\$CODEX_HOME"
+
 if [ -n "\${CODEX_CLI_PATH:-}" ]; then
   exec "\$CODEX_CLI_PATH" "\$@"
 elif command -v codex >/dev/null 2>&1; then
@@ -808,24 +845,20 @@ if (fs.existsSync(sourceUnpacked)) {
   cp(sourceUnpacked, unpacked);
 }
 
-run(
-  path.join(root, "node_modules", ".bin", "electron-rebuild"),
-  [
-    "--version",
-    "42.1.0",
-    "--module-dir",
-    appDest,
-    "--only",
-    "better-sqlite3,node-pty",
-  ],
-  {
-    env: {
-      npm_config_runtime: "electron",
-      npm_config_target: "42.1.0",
-      npm_config_disturl: "https://electronjs.org/headers",
+// These modules are copied into an app whose package manifest does not declare
+// them. electron-rebuild therefore skips them; invoke node-gyp directly.
+for (const name of ["better-sqlite3", "node-pty"]) {
+  run(
+    path.join(root, "node_modules", ".bin", "node-gyp"),
+    ["rebuild", `--target=${electronVersion}`, `--arch=${process.arch}`, "--dist-url=https://electronjs.org/headers"],
+    {
+      cwd: path.join(appDest, "node_modules", name),
+      // Compiling SQLite with the distribution's default optimization can
+      // exceed constrained build runners; it has no functional impact here.
+      env: name === "better-sqlite3" ? { CFLAGS: "-O0", CXXFLAGS: "-O0" } : {},
     },
-  },
-);
+  );
+}
 
 // Mirror rebuilt native modules into the unpacked overlay if it exists.
 for (const rel of [
@@ -851,6 +884,10 @@ export CODEX_SPARKLE_ENABLED=false
 export CODEX_USE_OWL_APP_SHELL=0
 export ELECTRON_OZONE_PLATFORM_HINT="\${ELECTRON_OZONE_PLATFORM_HINT:-x11}"
 export PATH="$HOME/.local/bin:$HOME/.npm-global/bin:/usr/local/bin:/usr/bin:/bin:\${PATH:-}"
+# The Electron main process resolves its Codex home before it starts the CLI.
+# Keep it separate from an installed Codex desktop client as well.
+export CODEX_HOME="\${CHATGPT_LINUX_CODEX_HOME:-$HOME/.chatgpt-linux-port}"
+mkdir -p "\$CODEX_HOME"
 cd "$DIR/resources/app"
 exec "$DIR/chatgpt-linux-port-bin" --class="${linuxDesktopClass}" --ozone-platform="\${CODEX_LINUX_OZONE_PLATFORM:-x11}" --disable-gpu-compositing "$@"
 `,
