@@ -59,6 +59,8 @@ function readAppMetadata(appRoot) {
 mustExist(path.join(builtApp, "chatgpt-linux-port"));
 const appMetadata = readAppMetadata(builtApp);
 
+run("pkill", ["-9", "-f", "chatgpt-linux-port-bin"]);
+
 fs.rmSync(installRoot, { force: true, recursive: true });
 fs.rmSync(legacyInstallRoot, { force: true, recursive: true });
 fs.mkdirSync(path.dirname(installRoot), { recursive: true });
