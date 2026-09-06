@@ -243,7 +243,7 @@ function patchAppIdentity() {
   }
 
   let bootstrap = fs.readFileSync(bootstrapPath, "utf8");
-  const match = bootstrap.match(/a\.app\.setName\([^)]+\),a\.app\.setPath\(`userData`,[^{]+\({appDataPath:a\.app\.getPath\(`appData`\),buildFlavor:Z,env:process\.env}\)\)/);
+  const match = bootstrap.match(/a\.app\.setName\(.+?\),a\.app\.setPath\(`userData`,\w+\(\{appDataPath:a\.app\.getPath\(`appData`\),buildFlavor:\w+,env:process\.env\}\)\)/);
   if (match) {
     const original = match[0];
     const replacement = original.replace(
@@ -285,6 +285,104 @@ function patchAppIdentity() {
   }
   fs.writeFileSync(bootstrapPath, bootstrap);
 }
+
+function patchOwlAppShell() {
+  const buildDir = path.join(appDest, ".vite", "build");
+  if (!fs.existsSync(buildDir)) {
+    return;
+  }
+
+  const bootstrapFiles = fs.readdirSync(buildDir).filter((name) => /^bootstrap-.*\.js$/.test(name));
+  for (const file of bootstrapFiles) {
+    const filePath = path.join(buildDir, file);
+    let content = fs.readFileSync(filePath, "utf8");
+    const owlRegex = /if\s*\(\s*process\.versions\.electron\s*!=\s*null\s*&&\s*typeof\s+[\w$]+(?:\.app)?\.showTaskManager\s*!=\s*[`'"]function[`'"]\s*\)\s*throw\s+Error\s*\([^)]*Owl app shell[^)]*\);?/g;
+    if (owlRegex.test(content)) {
+      content = content.replace(owlRegex, "if(typeof app!=='undefined'&&app&&typeof app.showTaskManager!=='function'){app.showTaskManager=()=>{};}");
+      fs.writeFileSync(filePath, content);
+      console.log(`Patched Owl app shell requirement in ${file}`);
+    } else {
+      const fallbackRegex = /throw\s+Error\s*\(\s*[`'"]Codex requires the Owl app shell; stock Electron is no longer supported\.[`'"]\s*\);?/g;
+      if (fallbackRegex.test(content)) {
+        content = content.replace(fallbackRegex, "/* Owl app shell check bypassed for Linux port */");
+        fs.writeFileSync(filePath, content);
+        console.log(`Patched Owl app shell error throw in ${file}`);
+      }
+    }
+  }
+
+  const earlyBootstrapPath = path.join(buildDir, "early-bootstrap.js");
+  if (fs.existsSync(earlyBootstrapPath)) {
+    let earlyBootstrap = fs.readFileSync(earlyBootstrapPath, "utf8");
+    const polyfills = `
+try {
+  const electron = require("electron");
+  if (electron.app) {
+    const app = electron.app;
+    if (typeof app.showTaskManager !== "function") app.showTaskManager = () => {};
+    if (typeof app.setDebugChromePagesEnabled !== "function") app.setDebugChromePagesEnabled = () => {};
+    if (typeof app.beginNativeMenuTracking !== "function") app.beginNativeMenuTracking = () => {};
+    if (typeof app.endNativeMenuTracking !== "function") app.endNativeMenuTracking = () => {};
+    if (typeof app.isRuntimeFeatureEnabled !== "function") app.isRuntimeFeatureEnabled = () => false;
+    if (typeof app.setRuntimeFeatures !== "function") app.setRuntimeFeatures = () => {};
+
+    app.whenReady().then(() => {
+      try {
+        if (electron.session && electron.session.defaultSession) {
+          const sessProto = Object.getPrototypeOf(electron.session.defaultSession);
+          if (sessProto && typeof sessProto.setPreferredLanguages !== "function") {
+            sessProto.setPreferredLanguages = function(langs) {
+              try { if (typeof this.setSpellCheckerLanguages === "function") this.setSpellCheckerLanguages(langs); } catch {}
+            };
+          }
+        }
+      } catch {}
+    });
+  }
+  if (electron.session && typeof electron.session.fromPartition === "function") {
+    const origFromPartition = electron.session.fromPartition;
+    electron.session.fromPartition = function(...args) {
+      const sess = origFromPartition.apply(this, args);
+      if (sess) {
+        const sessProto = Object.getPrototypeOf(sess);
+        if (sessProto && typeof sessProto.setPreferredLanguages !== "function") {
+          sessProto.setPreferredLanguages = function(langs) {
+            try { if (typeof this.setSpellCheckerLanguages === "function") this.setSpellCheckerLanguages(langs); } catch {}
+          };
+        }
+        if (typeof sess.setPreferredLanguages !== "function") {
+          sess.setPreferredLanguages = function(langs) {
+            try { if (typeof this.setSpellCheckerLanguages === "function") this.setSpellCheckerLanguages(langs); } catch {}
+          };
+        }
+      }
+      return sess;
+    };
+  }
+  if (electron.BrowserWindow) {
+    const BW = electron.BrowserWindow;
+    if (typeof BW.isInputShapeSupported !== "function") BW.isInputShapeSupported = () => false;
+    if (typeof BW.isSystemBackdropSupported !== "function") BW.isSystemBackdropSupported = () => false;
+  }
+  if (electron.webContents && electron.webContents.prototype) {
+    const proto = electron.webContents.prototype;
+    if (typeof proto.setPageCapturePaintLeaseEnabled !== "function") proto.setPageCapturePaintLeaseEnabled = () => {};
+    if (typeof proto.getExtensionActions !== "function") proto.getExtensionActions = () => [];
+    if (typeof proto.showExtensionActionContextMenu !== "function") proto.showExtensionActionContextMenu = async () => "closed";
+    if (typeof proto.triggerExtensionAction !== "function") proto.triggerExtensionAction = () => "cancelled";
+  }
+} catch (e) {
+  console.error("Polyfill error:", e);
+}
+`;
+    if (!earlyBootstrap.includes("setDebugChromePagesEnabled")) {
+      earlyBootstrap = polyfills.trim() + "\n" + earlyBootstrap;
+      fs.writeFileSync(earlyBootstrapPath, earlyBootstrap);
+      console.log("Patched early-bootstrap.js with Owl runtime polyfills");
+    }
+  }
+}
+
 
 function patchFirst(source, replacements, label) {
   for (const [from, to] of replacements) {
@@ -751,6 +849,7 @@ mustExist(electronDist, "Electron dist. Run npm install first");
 cp(electronDist, dist);
 cp(sourceApp, appDest);
 patchAppIdentity();
+patchOwlAppShell();
 patchLinuxRendering();
 patchLinuxOpenTargets();
 patchLinuxOpenTargetsWorker();
