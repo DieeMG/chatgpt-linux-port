@@ -243,12 +243,13 @@ function patchAppIdentity() {
   }
 
   let bootstrap = fs.readFileSync(bootstrapPath, "utf8");
-  const match = bootstrap.match(/a\.app\.setName\(.+?\),a\.app\.setPath\(`userData`,\w+\(\{appDataPath:a\.app\.getPath\(`appData`\),buildFlavor:\w+,env:process\.env\}\)\)/);
+  const match = bootstrap.match(/(\w+)\.app\.setName\(.+?\),\1\.app\.setPath\(`userData`,\w+\(\{appDataPath:\1\.app\.getPath\(`appData`\),buildFlavor:\w+,env:process\.env\}\)\)/);
   if (match) {
     const original = match[0];
+    const appVar = match[1];
     const replacement = original.replace(
-      ",a.app.setPath(",
-      ",process.platform===`linux`&&a.app.setDesktopName(`chatgpt-linux-port.desktop`),a.app.setPath("
+      `,${appVar}.app.setPath(`,
+      `,process.platform===\`linux\`&&${appVar}.app.setDesktopName(\`chatgpt-linux-port.desktop\`),${appVar}.app.setPath(`
     );
     bootstrap = bootstrap.replace(original, replacement);
   } else {
@@ -298,7 +299,7 @@ function patchOwlAppShell() {
     let content = fs.readFileSync(filePath, "utf8");
     const owlRegex = /if\s*\(\s*process\.versions\.electron\s*!=\s*null\s*&&\s*typeof\s+[\w$]+(?:\.app)?\.showTaskManager\s*!=\s*[`'"]function[`'"]\s*\)\s*throw\s+Error\s*\([^)]*Owl app shell[^)]*\);?/g;
     if (owlRegex.test(content)) {
-      content = content.replace(owlRegex, "if(typeof app!=='undefined'&&app&&typeof app.showTaskManager!=='function'){app.showTaskManager=()=>{};}");
+      content = content.replace(owlRegex, "/* Owl app shell check bypassed for Linux port */");
       fs.writeFileSync(filePath, content);
       console.log(`Patched Owl app shell requirement in ${file}`);
     } else {
@@ -316,7 +317,61 @@ function patchOwlAppShell() {
     let earlyBootstrap = fs.readFileSync(earlyBootstrapPath, "utf8");
     const polyfills = `
 try {
+  process.on("uncaughtException", (err) => {
+    console.error("[chatgpt-linux-port] Uncaught exception:", err);
+  });
+  process.on("unhandledRejection", (reason) => {
+    console.error("[chatgpt-linux-port] Unhandled rejection:", reason);
+  });
+
   const electron = require("electron");
+
+  function polyfillSession(sess) {
+    if (!sess) return;
+    try {
+      const sessProto = Object.getPrototypeOf(sess);
+      if (sessProto) {
+        if (typeof sessProto.setWebsiteReportingEnabled !== "function") sessProto.setWebsiteReportingEnabled = () => {};
+        if (typeof sessProto.setPreferredLanguages !== "function") {
+          sessProto.setPreferredLanguages = function(langs) {
+            try { if (typeof this.setSpellCheckerLanguages === "function") this.setSpellCheckerLanguages(langs); } catch {}
+          };
+        }
+        if (typeof sessProto.getDownloadHistory !== "function") sessProto.getDownloadHistory = async () => [];
+        if (typeof sessProto.removeDownloadFromHistory !== "function") sessProto.removeDownloadFromHistory = async () => true;
+        if (typeof sessProto.searchDownloadHistory !== "function") sessProto.searchDownloadHistory = async () => [];
+        if (typeof sessProto.setAutomaticBackgroundDownloadsEnabled !== "function") sessProto.setAutomaticBackgroundDownloadsEnabled = () => {};
+        if (typeof sessProto.setPermissionPromptHandler !== "function") sessProto.setPermissionPromptHandler = () => {};
+      }
+    } catch {}
+    if (typeof sess.setWebsiteReportingEnabled !== "function") sess.setWebsiteReportingEnabled = () => {};
+    if (typeof sess.setPreferredLanguages !== "function") {
+      sess.setPreferredLanguages = function(langs) {
+        try { if (typeof this.setSpellCheckerLanguages === "function") this.setSpellCheckerLanguages(langs); } catch {}
+      };
+    }
+    if (typeof sess.getDownloadHistory !== "function") sess.getDownloadHistory = async () => [];
+    if (typeof sess.removeDownloadFromHistory !== "function") sess.removeDownloadFromHistory = async () => true;
+    if (typeof sess.searchDownloadHistory !== "function") sess.searchDownloadHistory = async () => [];
+    if (typeof sess.setAutomaticBackgroundDownloadsEnabled !== "function") sess.setAutomaticBackgroundDownloadsEnabled = () => {};
+    if (typeof sess.setPermissionPromptHandler !== "function") sess.setPermissionPromptHandler = () => {};
+  }
+
+  if (electron.session) {
+    if (typeof electron.session.fromPartition === "function") {
+      const origFromPartition = electron.session.fromPartition;
+      electron.session.fromPartition = function(...args) {
+        const sess = origFromPartition.apply(this, args);
+        polyfillSession(sess);
+        return sess;
+      };
+      try {
+        const dummy = electron.session.fromPartition("__early_init__");
+        polyfillSession(dummy);
+      } catch {}
+    }
+  }
+
   if (electron.app) {
     const app = electron.app;
     if (typeof app.showTaskManager !== "function") app.showTaskManager = () => {};
@@ -326,56 +381,42 @@ try {
     if (typeof app.isRuntimeFeatureEnabled !== "function") app.isRuntimeFeatureEnabled = () => false;
     if (typeof app.setRuntimeFeatures !== "function") app.setRuntimeFeatures = () => {};
 
+    if (typeof app.on === "function") {
+      app.on("session-created", (sess) => {
+        polyfillSession(sess);
+      });
+    }
+
     app.whenReady().then(() => {
       try {
         if (electron.session && electron.session.defaultSession) {
-          const sessProto = Object.getPrototypeOf(electron.session.defaultSession);
-          if (sessProto && typeof sessProto.setPreferredLanguages !== "function") {
-            sessProto.setPreferredLanguages = function(langs) {
-              try { if (typeof this.setSpellCheckerLanguages === "function") this.setSpellCheckerLanguages(langs); } catch {}
-            };
-          }
+          polyfillSession(electron.session.defaultSession);
         }
       } catch {}
     });
   }
-  if (electron.session && typeof electron.session.fromPartition === "function") {
-    const origFromPartition = electron.session.fromPartition;
-    electron.session.fromPartition = function(...args) {
-      const sess = origFromPartition.apply(this, args);
-      if (sess) {
-        const sessProto = Object.getPrototypeOf(sess);
-        if (sessProto && typeof sessProto.setPreferredLanguages !== "function") {
-          sessProto.setPreferredLanguages = function(langs) {
-            try { if (typeof this.setSpellCheckerLanguages === "function") this.setSpellCheckerLanguages(langs); } catch {}
-          };
-        }
-        if (typeof sess.setPreferredLanguages !== "function") {
-          sess.setPreferredLanguages = function(langs) {
-            try { if (typeof this.setSpellCheckerLanguages === "function") this.setSpellCheckerLanguages(langs); } catch {}
-          };
-        }
-      }
-      return sess;
-    };
-  }
+
   if (electron.BrowserWindow) {
     const BW = electron.BrowserWindow;
     if (typeof BW.isInputShapeSupported !== "function") BW.isInputShapeSupported = () => false;
     if (typeof BW.isSystemBackdropSupported !== "function") BW.isSystemBackdropSupported = () => false;
+    if (typeof BW.isAlwaysOnTopSupported !== "function") BW.isAlwaysOnTopSupported = () => true;
   }
+
   if (electron.webContents && electron.webContents.prototype) {
     const proto = electron.webContents.prototype;
     if (typeof proto.setPageCapturePaintLeaseEnabled !== "function") proto.setPageCapturePaintLeaseEnabled = () => {};
     if (typeof proto.getExtensionActions !== "function") proto.getExtensionActions = () => [];
     if (typeof proto.showExtensionActionContextMenu !== "function") proto.showExtensionActionContextMenu = async () => "closed";
     if (typeof proto.triggerExtensionAction !== "function") proto.triggerExtensionAction = () => "cancelled";
+    if (typeof proto.executeExtensionActionContextMenuCommand !== "function") proto.executeExtensionActionContextMenuCommand = () => {};
+    if (typeof proto.closeExtensionActionContextMenu !== "function") proto.closeExtensionActionContextMenu = () => {};
   }
 } catch (e) {
   console.error("Polyfill error:", e);
 }
 `;
-    if (!earlyBootstrap.includes("setDebugChromePagesEnabled")) {
+    if (!earlyBootstrap.includes("setPermissionPromptHandler")) {
       earlyBootstrap = polyfills.trim() + "\n" + earlyBootstrap;
       fs.writeFileSync(earlyBootstrapPath, earlyBootstrap);
       console.log("Patched early-bootstrap.js with Owl runtime polyfills");
