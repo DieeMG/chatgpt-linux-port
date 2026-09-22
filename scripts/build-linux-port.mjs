@@ -424,6 +424,25 @@ try {
   }
 }
 
+function patchWorkspaceRouting() {
+  const buildDir = path.join(appDest, ".vite", "build");
+  if (!fs.existsSync(buildDir)) {
+    return;
+  }
+
+  const srcFiles = fs.readdirSync(buildDir).filter((name) => /^src-.*\.js$/.test(name));
+  for (const file of srcFiles) {
+    const filePath = path.join(buildDir, file);
+    let content = fs.readFileSync(filePath, "utf8");
+    const upperLimitRegex = /&&\s*[a-zA-Z0-9_$]+\(\w+,\s*[`'"]0\.155\.[^`'"]+[`'"]\)\s*<\s*0/g;
+    if (upperLimitRegex.test(content)) {
+      content = content.replace(upperLimitRegex, "");
+      fs.writeFileSync(filePath, content);
+      console.log(`Patched workspace routing app-server version check in ${file}`);
+    }
+  }
+}
+
 
 function patchFirst(source, replacements, label) {
   for (const [from, to] of replacements) {
@@ -891,6 +910,7 @@ cp(electronDist, dist);
 cp(sourceApp, appDest);
 patchAppIdentity();
 patchOwlAppShell();
+patchWorkspaceRouting();
 patchLinuxRendering();
 patchLinuxOpenTargets();
 patchLinuxOpenTargetsWorker();
