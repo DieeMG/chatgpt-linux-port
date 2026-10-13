@@ -186,18 +186,19 @@ function findMainBundle() {
 function patchLinuxRendering() {
   const cssPath = path.join(appDest, "webview", "assets", "chatgpt-linux-port-opaque.css");
   const htmlPath = path.join(appDest, "webview", "index.html");
+  const preloadPath = path.join(appDest, ".vite", "build", "preload.js");
   const cssLink = '<link rel="stylesheet" href="./assets/chatgpt-linux-port-opaque.css">';
 
   fs.writeFileSync(
     cssPath,
-    `html[data-codex-window-type="electron"],
-html[data-codex-window-type="electron"] body,
-html[data-codex-window-type="electron"] #root {
+    `html[data-codex-window-type="electron"]:not([data-window-appearance="avatarOverlay"]),
+html[data-codex-window-type="electron"]:not([data-window-appearance="avatarOverlay"]) body,
+html[data-codex-window-type="electron"]:not([data-window-appearance="avatarOverlay"]) #root {
   background-color: var(--color-background-surface-under, #181818) !important;
   background-image: none !important;
 }
 
-html[data-codex-window-type="electron"]:not([data-codex-window-chrome="application-menu"]) body {
+html[data-codex-window-type="electron"]:not([data-window-appearance="avatarOverlay"]):not([data-codex-window-chrome="application-menu"]) body {
   background-color: var(--color-background-surface-under, #181818) !important;
   background-image: none !important;
 }
@@ -216,6 +217,20 @@ html[data-codex-window-type="electron"] .app-header-tint {
   backdrop-filter: none !important;
   -webkit-backdrop-filter: none !important;
 }
+
+html[data-window-appearance="avatarOverlay"],
+html[data-window-appearance="avatarOverlay"] body,
+html[data-window-appearance="avatarOverlay"] #root,
+html:has([data-avatar-overlay-hit-region]),
+html:has([data-avatar-overlay-hit-region]) body,
+html:has([data-avatar-overlay-hit-region]) #root {
+  background-color: transparent !important;
+  background: transparent !important;
+}
+
+html[data-window-appearance="avatarOverlay"] .startup-loader {
+  display: none !important;
+}
 `,
   );
 
@@ -226,7 +241,19 @@ html[data-codex-window-type="electron"] .app-header-tint {
       fs.writeFileSync(htmlPath, html);
     }
   }
+
+  if (fs.existsSync(preloadPath)) {
+    let preload = fs.readFileSync(preloadPath, "utf8");
+    const target = "j=e.ipcRenderer.sendSync(f),M=document.documentElement;if(M!=null)M.dataset.theme=j;else{let e=new MutationObserver(()=>{let t=document.documentElement;t!=null&&(t.dataset.theme=j,e.disconnect())});e.observe(document,{childList:!0})}";
+    const replacement = "j=e.ipcRenderer.sendSync(f),M=document.documentElement;let isPet=window.location.href.includes(\"avatar-overlay\");if(M!=null){M.dataset.theme=j;if(isPet)M.dataset.windowAppearance=\"avatarOverlay\";}else{let e=new MutationObserver(()=>{let t=document.documentElement;t!=null&&(t.dataset.theme=j,isPet&&(t.dataset.windowAppearance=\"avatarOverlay\"),e.disconnect())});e.observe(document,{childList:!0})}";
+    if (preload.includes(target)) {
+      preload = preload.replace(target, replacement);
+      fs.writeFileSync(preloadPath, preload);
+      console.log("Patched preload.js with avatarOverlay windowAppearance");
+    }
+  }
 }
+
 
 function patchAppIdentity() {
   const packageJsonPath = path.join(appDest, "package.json");
@@ -392,13 +419,54 @@ try {
         if (electron.session && electron.session.defaultSession) {
           polyfillSession(electron.session.defaultSession);
         }
+        if (electron.screen && typeof electron.screen.isCursorScreenPointSupported !== "function") {
+          electron.screen.isCursorScreenPointSupported = () => true;
+        }
       } catch {}
     });
   }
 
+  try {
+    const origScreenGetter = Object.getOwnPropertyDescriptor(electron, "screen");
+    if (origScreenGetter && origScreenGetter.get) {
+      Object.defineProperty(electron, "screen", {
+        configurable: true,
+        enumerable: true,
+        get() {
+          const s = origScreenGetter.get.call(this);
+          if (s && typeof s.isCursorScreenPointSupported !== "function") {
+            s.isCursorScreenPointSupported = () => true;
+          }
+          return s;
+        }
+      });
+    }
+  } catch {}
+
   if (electron.BrowserWindow) {
     const BW = electron.BrowserWindow;
-    if (typeof BW.isInputShapeSupported !== "function") BW.isInputShapeSupported = () => false;
+    BW.isInputShapeSupported = () => true;
+    if (typeof BW.prototype.setInputShape !== "function") {
+      BW.prototype.setInputShape = function(rects) {
+        try {
+          if (typeof this.setShape === "function" && Array.isArray(rects)) {
+            const valid = rects
+              .map(r => ({
+                x: Math.floor(r.x || 0),
+                y: Math.floor(r.y || 0),
+                width: Math.ceil(r.width || 0),
+                height: Math.ceil(r.height || 0)
+              }))
+              .filter(r => r.width > 0 && r.height > 0);
+            this.setShape(valid);
+            return true;
+          }
+        } catch (e) {
+          console.error("[chatgpt-linux-port] setInputShape failed:", e);
+        }
+        return false;
+      };
+    }
     if (typeof BW.isSystemBackdropSupported !== "function") BW.isSystemBackdropSupported = () => false;
     if (typeof BW.isAlwaysOnTopSupported !== "function") BW.isAlwaysOnTopSupported = () => true;
   }
@@ -970,14 +1038,16 @@ set -euo pipefail
 export CODEX_HOME="\${CHATGPT_LINUX_CODEX_HOME:-\$HOME/.chatgpt-linux-port}"
 mkdir -p "\$CODEX_HOME"
 
-if [ -n "\${CODEX_CLI_PATH:-}" ]; then
+SELF_PATH="$(readlink -f "$0" 2>/dev/null || echo "$0")"
+
+if [ -n "\${CODEX_CLI_PATH:-}" ] && [ "\$CODEX_CLI_PATH" != "$0" ] && [ "$(readlink -f "\$CODEX_CLI_PATH" 2>/dev/null || echo "\$CODEX_CLI_PATH")" != "\$SELF_PATH" ]; then
   exec "\$CODEX_CLI_PATH" "\$@"
-elif command -v codex >/dev/null 2>&1; then
-  exec codex "\$@"
 elif [ -x "\$HOME/.npm-global/bin/codex" ]; then
   exec "\$HOME/.npm-global/bin/codex" "\$@"
 elif [ -x "\$HOME/.local/bin/codex" ]; then
   exec "\$HOME/.local/bin/codex" "\$@"
+elif command -v codex >/dev/null 2>&1 && [ "$(readlink -f "$(command -v codex)" 2>/dev/null || echo "")" != "\$SELF_PATH" ]; then
+  exec codex "\$@"
 else
   echo "Error: codex CLI not found. Please install it using 'npm i -g @openai/codex' or 'curl -fsSL https://chatgpt.com/codex/install.sh | sh'" >&2
   exit 1
