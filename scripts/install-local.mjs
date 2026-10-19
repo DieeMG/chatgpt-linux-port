@@ -17,7 +17,7 @@ const launcher = path.join(binDir, "chatgpt-app");
 const legacyLauncher = path.join(binDir, "codex-app");
 const desktopFile = path.join(applicationsDir, "chatgpt-linux-port.desktop");
 const legacyDesktopFile = path.join(applicationsDir, "codex-linux-port.desktop");
-const linuxDesktopClass = "chatgpt";
+const linuxDesktopClass = "chatgpt-port";
 
 function mustExist(target) {
   if (!fs.existsSync(target)) {
@@ -82,7 +82,7 @@ fs.writeFileSync(
   desktopFile,
   `[Desktop Entry]
 Type=Application
-Name=${appMetadata.displayName}
+Name=${appMetadata.displayName} (Port macOS)
 Comment=Experimental Linux port of the ${appMetadata.displayName} Electron desktop app
 Exec=${launcher} %u
 Icon=${path.join(installRoot, "resources", "icon.png")}

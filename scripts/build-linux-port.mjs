@@ -9,7 +9,7 @@ const dist = path.join(root, "out", "ChatGPT-linux-x64");
 const resources = path.join(dist, "resources");
 const appDest = path.join(resources, "app");
 const nativeDeps = path.join(root, "work", "linux-native-deps");
-const linuxDesktopClass = "chatgpt";
+const linuxDesktopClass = "chatgpt-port";
 
 function rm(target) {
   fs.rmSync(target, { force: true, recursive: true });
@@ -1121,7 +1121,9 @@ export PATH="$HOME/.local/bin:$HOME/.npm-global/bin:/usr/local/bin:/usr/bin:/bin
 # The Electron main process resolves its Codex home before it starts the CLI.
 # Keep it separate from an installed Codex desktop client as well.
 export CODEX_HOME="\${CHATGPT_LINUX_CODEX_HOME:-$HOME/.chatgpt-linux-port}"
+export CODEX_ELECTRON_USER_DATA_PATH="\${CHATGPT_LINUX_USER_DATA:-$HOME/.config/chatgpt-linux-port}"
 mkdir -p "\$CODEX_HOME"
+mkdir -p "\$CODEX_ELECTRON_USER_DATA_PATH"
 cd "$DIR/resources/app"
 exec "$DIR/chatgpt-linux-port-bin" --class="${linuxDesktopClass}" --ozone-platform="\${CODEX_LINUX_OZONE_PLATFORM:-x11}" --disable-gpu-compositing "$@"
 `,
@@ -1132,7 +1134,7 @@ fs.writeFileSync(
   desktop,
   `[Desktop Entry]
 Type=Application
-Name=${appMetadata.displayName}
+Name=${appMetadata.displayName} (Port macOS)
 Comment=Experimental Linux port of the ${appMetadata.displayName} Electron desktop app
 Exec=${bin} %u
 Icon=${path.join(resources, "icon.png")}
