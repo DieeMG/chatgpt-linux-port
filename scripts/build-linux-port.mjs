@@ -369,6 +369,8 @@ try {
         if (typeof sessProto.searchDownloadHistory !== "function") sessProto.searchDownloadHistory = async () => [];
         if (typeof sessProto.setAutomaticBackgroundDownloadsEnabled !== "function") sessProto.setAutomaticBackgroundDownloadsEnabled = () => {};
         if (typeof sessProto.setPermissionPromptHandler !== "function") sessProto.setPermissionPromptHandler = () => {};
+        if (typeof sessProto.setOpenURLHandler !== "function") sessProto.setOpenURLHandler = () => {};
+        if (typeof sessProto.setWebContentsActivationHandler !== "function") sessProto.setWebContentsActivationHandler = () => {};
       }
     } catch {}
     if (typeof sess.setWebsiteReportingEnabled !== "function") sess.setWebsiteReportingEnabled = () => {};
@@ -382,6 +384,8 @@ try {
     if (typeof sess.searchDownloadHistory !== "function") sess.searchDownloadHistory = async () => [];
     if (typeof sess.setAutomaticBackgroundDownloadsEnabled !== "function") sess.setAutomaticBackgroundDownloadsEnabled = () => {};
     if (typeof sess.setPermissionPromptHandler !== "function") sess.setPermissionPromptHandler = () => {};
+    if (typeof sess.setOpenURLHandler !== "function") sess.setOpenURLHandler = () => {};
+    if (typeof sess.setWebContentsActivationHandler !== "function") sess.setWebContentsActivationHandler = () => {};
   }
 
   if (electron.session) {
@@ -484,7 +488,7 @@ try {
   console.error("Polyfill error:", e);
 }
 `;
-    if (!earlyBootstrap.includes("setPermissionPromptHandler")) {
+    if (!earlyBootstrap.includes("setOpenURLHandler")) {
       earlyBootstrap = polyfills.trim() + "\n" + earlyBootstrap;
       fs.writeFileSync(earlyBootstrapPath, earlyBootstrap);
       console.log("Patched early-bootstrap.js with Owl runtime polyfills");
