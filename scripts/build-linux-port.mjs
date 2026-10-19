@@ -1120,7 +1120,7 @@ export ELECTRON_OZONE_PLATFORM_HINT="\${ELECTRON_OZONE_PLATFORM_HINT:-x11}"
 export PATH="$HOME/.local/bin:$HOME/.npm-global/bin:/usr/local/bin:/usr/bin:/bin:\${PATH:-}"
 # The Electron main process resolves its Codex home before it starts the CLI.
 # Keep it separate from an installed Codex desktop client as well.
-export CODEX_HOME="\${CHATGPT_LINUX_CODEX_HOME:-$HOME/.chatgpt-linux-port}"
+export CODEX_HOME="\${CHATGPT_LINUX_CODEX_HOME:-$HOME/.codex}"
 export CODEX_ELECTRON_USER_DATA_PATH="\${CHATGPT_LINUX_USER_DATA:-$HOME/.config/chatgpt-linux-port}"
 mkdir -p "\$CODEX_HOME"
 mkdir -p "\$CODEX_ELECTRON_USER_DATA_PATH"
