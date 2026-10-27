@@ -475,20 +475,62 @@ try {
     if (typeof BW.isAlwaysOnTopSupported !== "function") BW.isAlwaysOnTopSupported = () => true;
   }
 
-  if (electron.webContents && electron.webContents.prototype) {
-    const proto = electron.webContents.prototype;
-    if (typeof proto.setPageCapturePaintLeaseEnabled !== "function") proto.setPageCapturePaintLeaseEnabled = () => {};
-    if (typeof proto.getExtensionActions !== "function") proto.getExtensionActions = () => [];
-    if (typeof proto.showExtensionActionContextMenu !== "function") proto.showExtensionActionContextMenu = async () => "closed";
-    if (typeof proto.triggerExtensionAction !== "function") proto.triggerExtensionAction = () => "cancelled";
-    if (typeof proto.executeExtensionActionContextMenuCommand !== "function") proto.executeExtensionActionContextMenuCommand = () => {};
-    if (typeof proto.closeExtensionActionContextMenu !== "function") proto.closeExtensionActionContextMenu = () => {};
+  function polyfillWebContents(wc) {
+    if (!wc) return;
+    try {
+      const proto = Object.getPrototypeOf(wc);
+      if (proto) {
+        if (typeof proto.setPageCapturePaintLeaseEnabled !== "function") proto.setPageCapturePaintLeaseEnabled = () => {};
+        if (typeof proto.getExtensionActions !== "function") proto.getExtensionActions = () => [];
+        if (typeof proto.showExtensionActionContextMenu !== "function") proto.showExtensionActionContextMenu = async () => "closed";
+        if (typeof proto.triggerExtensionAction !== "function") proto.triggerExtensionAction = () => "cancelled";
+        if (typeof proto.executeExtensionActionContextMenuCommand !== "function") proto.executeExtensionActionContextMenuCommand = () => {};
+        if (typeof proto.closeExtensionActionContextMenu !== "function") proto.closeExtensionActionContextMenu = () => {};
+        if (typeof proto.setDevToolsStyle !== "function") proto.setDevToolsStyle = () => {};
+      }
+    } catch {}
+    if (typeof wc.setPageCapturePaintLeaseEnabled !== "function") wc.setPageCapturePaintLeaseEnabled = () => {};
+    if (typeof wc.getExtensionActions !== "function") wc.getExtensionActions = () => [];
+    if (typeof wc.showExtensionActionContextMenu !== "function") wc.showExtensionActionContextMenu = async () => "closed";
+    if (typeof wc.triggerExtensionAction !== "function") wc.triggerExtensionAction = () => "cancelled";
+    if (typeof wc.executeExtensionActionContextMenuCommand !== "function") wc.executeExtensionActionContextMenuCommand = () => {};
+    if (typeof wc.closeExtensionActionContextMenu !== "function") wc.closeExtensionActionContextMenu = () => {};
+    if (typeof wc.setDevToolsStyle !== "function") wc.setDevToolsStyle = () => {};
+  }
+
+  if (electron.app && typeof electron.app.on === "function") {
+    electron.app.on("web-contents-created", (_event, wc) => {
+      polyfillWebContents(wc);
+    });
+  }
+
+  if (electron.webContents && typeof electron.webContents.getAllWebContents === "function") {
+    try {
+      for (const wc of electron.webContents.getAllWebContents()) {
+        polyfillWebContents(wc);
+      }
+    } catch {}
+  }
+
+  if (electron.BrowserWindow) {
+    const origGet = Object.getOwnPropertyDescriptor(electron.BrowserWindow.prototype, "webContents")?.get;
+    if (origGet) {
+      Object.defineProperty(electron.BrowserWindow.prototype, "webContents", {
+        configurable: true,
+        enumerable: true,
+        get() {
+          const wc = origGet.call(this);
+          polyfillWebContents(wc);
+          return wc;
+        }
+      });
+    }
   }
 } catch (e) {
   console.error("Polyfill error:", e);
 }
 `;
-    if (!earlyBootstrap.includes("setOpenURLHandler")) {
+    if (!earlyBootstrap.includes("setDevToolsStyle")) {
       earlyBootstrap = polyfills.trim() + "\n" + earlyBootstrap;
       fs.writeFileSync(earlyBootstrapPath, earlyBootstrap);
       console.log("Patched early-bootstrap.js with Owl runtime polyfills");
