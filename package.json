@@ -8,7 +8,8 @@
     "prepare:source": "node scripts/prepare-source.mjs",
     "build": "node scripts/build-linux-port.mjs",
     "doctor": "node scripts/doctor.mjs",
-    "install:local": "node scripts/install-local.mjs"
+    "install:local": "node scripts/install-local.mjs",
+    "uninstall:local": "node scripts/uninstall-local.mjs"
   },
   "devDependencies": {
     "@electron/rebuild": "4.0.1",

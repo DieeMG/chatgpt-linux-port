@@ -59,6 +59,14 @@ The local install path is:
 
 `install:local` removes legacy `codex-linux-port` install artifacts, including `~/.local/share/codex-linux-port`, `~/.local/bin/codex-app`, and `codex-linux-port.desktop`.
 
+## Uninstall
+
+To cleanly remove the installed port, launchers, desktop entries, and user data:
+
+```bash
+npm run uninstall:local
+```
+
 ## Rendering Notes
 
 The macOS app uses transparent Electron window surfaces. On Linux this can produce transparent sidebars and hover trails, especially under Wayland/compositor combinations. The builder injects `webview/assets/chatgpt-linux-port-opaque.css` and launches Electron with X11 ozone plus disabled GPU compositing:
